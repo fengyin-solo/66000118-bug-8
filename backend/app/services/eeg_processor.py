@@ -14,11 +14,23 @@ def generate_mock_eeg(duration_sec: float = 5.0) -> dict:
     return {'channels': CHANNELS, 'sample_rate': SAMPLE_RATE, 'data': data, 'time': t.tolist(), 'duration': duration_sec}
 
 def compute_band_power(channel_data: list, sample_rate: int) -> dict:
-    freqs, psd = signal.welch(channel_data, fs=sample_rate, nperseg=256)
+    # 空/无效数据：各频段均标记为 None（缺失），前端据此显示"无数据"，
+    # 不能返回 0.0 —— 零值是真实的计算结果，缺失不是零。
+    arr = np.asarray(channel_data, dtype=float)
+    if arr.size == 0 or not np.isfinite(arr).any():
+        return {name: None for name in BANDS}
+    try:
+        freqs, psd = signal.welch(arr[np.isfinite(arr)], fs=sample_rate, nperseg=256)
+    except Exception:
+        return {name: None for name in BANDS}
     result = {}
     for name, (low, high) in BANDS.items():
         mask = (freqs >= low) & (freqs <= high)
-        result[name] = float(np.trapz(psd[mask], freqs[mask])) if mask.any() else 0.0
+        if not mask.any():
+            result[name] = None
+            continue
+        power = float(np.trapz(psd[mask], freqs[mask]))
+        result[name] = power if np.isfinite(power) else None
     return result
 
 def compute_spectrogram(channel_data: list, sample_rate: int) -> dict:
@@ -28,10 +40,12 @@ def compute_spectrogram(channel_data: list, sample_rate: int) -> dict:
 def compute_brain_state(channel_data: list, sample_rate: int) -> dict:
     import time
     bands = compute_band_power(channel_data, sample_rate)
-    total = sum(bands.values()) + 1e-10
-    beta_rel = bands['beta'] / total
-    alpha_rel = bands['alpha'] / total
-    theta_rel = bands['theta'] / total
+    # 缺失频段按 0 参与相对占比计算（不改变 None 的"缺失"语义）
+    values = {k: (v if v is not None else 0.0) for k, v in bands.items()}
+    total = sum(values.values()) + 1e-10
+    beta_rel = values['beta'] / total
+    alpha_rel = values['alpha'] / total
+    theta_rel = values['theta'] / total
     focus = min(100.0, max(0.0, (beta_rel * 300) + np.random.uniform(-5, 5)))
     relaxation = min(100.0, max(0.0, (alpha_rel * 300) + np.random.uniform(-5, 5)))
     fatigue = min(100.0, max(0.0, (theta_rel * 300) + np.random.uniform(-5, 5)))

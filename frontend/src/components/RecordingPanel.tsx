@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useEEGStore } from '../store/eeg';
 import { Recording } from '../types';
+import { formatBandValue } from '../utils/eeg';
 
 const CHANNEL_NAMES: Record<string, string> = {
   Fp1: '左前额', Fp2: '右前额', F3: '左额', F4: '右额',
   C3: '左中央', C4: '右中央', P3: '左顶', P4: '右顶',
   O1: '左枕', O2: '右枕'
 };
+
+const formatBand = (v: number | null): string => formatBandValue(v, 2);
 
 const formatDuration = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
@@ -335,9 +338,9 @@ export const RecordingPanel: React.FC = () => {
                 <span style={{ fontSize: '11px', color: '#388e3c' }}>放松: {playbackState.currentFrame.brainState.relaxation.toFixed(0)}</span>
                 <span style={{ fontSize: '11px', color: '#d32f2f' }}>疲劳: {playbackState.currentFrame.brainState.fatigue.toFixed(0)}</span>
                 <span style={{ fontSize: '11px', color: '#666' }}>|</span>
-                <span style={{ fontSize: '11px', color: '#1565c0' }}>α: {playbackState.currentFrame.bands.alpha.toFixed(2)}</span>
-                <span style={{ fontSize: '11px', color: '#e53935' }}>β: {playbackState.currentFrame.bands.beta.toFixed(2)}</span>
-                <span style={{ fontSize: '11px', color: '#2e7d32' }}>θ: {playbackState.currentFrame.bands.theta.toFixed(2)}</span>
+                <span style={{ fontSize: '11px', color: '#1565c0' }}>α: {formatBand(playbackState.currentFrame.bands.alpha)}</span>
+                <span style={{ fontSize: '11px', color: '#e53935' }}>β: {formatBand(playbackState.currentFrame.bands.beta)}</span>
+                <span style={{ fontSize: '11px', color: '#2e7d32' }}>θ: {formatBand(playbackState.currentFrame.bands.theta)}</span>
               </div>
               <div style={{
                 display: 'flex',

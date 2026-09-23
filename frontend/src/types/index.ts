@@ -1,5 +1,12 @@
 export interface EEGData { channels: string[]; sample_rate: number; data: Record<string, number[]>; time: number[]; duration: number; }
-export interface BandPower { delta: number; theta: number; alpha: number; beta: number; gamma: number; }
+export interface BandPower {
+  // 缺失（该频段无有效数据）时为 null，区别于真实的零值
+  delta: number | null;
+  theta: number | null;
+  alpha: number | null;
+  beta: number | null;
+  gamma: number | null;
+}
 export interface BrainState {
   focus: number;
   relaxation: number;
@@ -43,3 +50,6 @@ export interface PlaybackState {
   currentTime: number;
   currentFrame: RecordingFrame | null;
 }
+
+// 实时数据加载状态：加载中 / 成功 / 请求失败 / 通道无数据
+export type LiveStatus = 'loading' | 'success' | 'error' | 'no_data';

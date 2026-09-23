@@ -1,16 +1,11 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 import { useEEGStore } from '../store/eeg';
-
-const CHANNEL_NAMES: Record<string, string> = {
-  Fp1: '左前额', Fp2: '右前额', F3: '左额', F4: '右额',
-  C3: '左中央', C4: '右中央', P3: '左顶', P4: '右顶',
-  O1: '左枕', O2: '右枕'
-};
+import { channelDisplayName, CHANNEL_NAMES } from '../utils/eeg';
 
 export const CorrelationChart: React.FC = () => {
   const { correlationData, selectedChannel, playbackMode } = useEEGStore();
-  const channelName = CHANNEL_NAMES[selectedChannel] || selectedChannel;
+  const channelName = channelDisplayName(selectedChannel);
 
   if (!correlationData) {
     return (
@@ -26,14 +21,16 @@ export const CorrelationChart: React.FC = () => {
     );
   }
 
+  // 以当前数据自身记录的目标通道为准（回放帧的目标通道可能与实时选择不同）
+  const targetChannel = correlationData.targetChannel;
   const chartData = correlationData.correlations
-    .filter(c => c.channel !== selectedChannel)
+    .filter(c => c.channel !== targetChannel)
     .map(c => ({
       name: c.channel,
       nameCn: CHANNEL_NAMES[c.channel] || c.channel,
       correlation: Math.abs(c.correlation) * 100,
       coherence: c.coherence * 100,
-      isTarget: c.channel === selectedChannel
+      isTarget: c.channel === targetChannel
     }));
 
   const getCorrelationColor = (value: number) => {

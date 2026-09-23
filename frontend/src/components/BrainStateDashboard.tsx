@@ -1,11 +1,6 @@
 import React from 'react';
 import { useEEGStore } from '../store/eeg';
-
-const CHANNEL_NAMES: Record<string, string> = {
-  Fp1: '左前额', Fp2: '右前额', F3: '左额', F4: '右额',
-  C3: '左中央', C4: '右中央', P3: '左顶', P4: '右顶',
-  O1: '左枕', O2: '右枕'
-};
+import { channelDisplayName } from '../utils/eeg';
 
 const ScoreBar: React.FC<{ label: string; value: number; color: string; icon: string }> = ({ label, value, color, icon }) => {
   return (
@@ -34,7 +29,7 @@ const ScoreBar: React.FC<{ label: string; value: number; color: string; icon: st
 
 export const BrainStateDashboard: React.FC = () => {
   const { brainState, selectedChannel, playbackMode, activeRecording, playbackState } = useEEGStore();
-  const channelName = CHANNEL_NAMES[selectedChannel] || selectedChannel;
+  const channelName = channelDisplayName(selectedChannel);
 
   if (!brainState) {
     return (
