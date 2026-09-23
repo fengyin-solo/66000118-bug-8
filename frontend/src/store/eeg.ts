@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { EEGData, BandPower, BrainState, CorrelationData, Recording, RecordingFrame, PlaybackState } from '../types';
+import { EEGData, BandPower, BrainState, CorrelationData, Recording, RecordingFrame, PlaybackState, SampleStatus } from '../types';
 
 const STORAGE_KEY = 'eeg_recordings';
 
@@ -22,6 +22,8 @@ interface EEGState {
   eegData: EEGData | null;
   selectedChannel: string;
   bandPower: BandPower | null;
+  sampleStatus: SampleStatus;
+  sampleError: string | null;
   isStreaming: boolean;
   brainState: BrainState | null;
   correlationData: CorrelationData | null;
@@ -35,6 +37,10 @@ interface EEGState {
   setEEGData: (d: EEGData | null) => void;
   setChannel: (c: string) => void;
   setBandPower: (b: BandPower | null) => void;
+  setLiveSampleLoading: () => void;
+  setLiveSample: (channel: string, eeg: EEGData, bands: BandPower, brainState: BrainState, correlation: CorrelationData) => boolean;
+  setLiveSampleError: (error: string) => void;
+  clearLiveSample: () => void;
   setStreaming: (v: boolean) => void;
   setBrainState: (s: BrainState | null) => void;
   setCorrelationData: (c: CorrelationData | null) => void;
@@ -53,6 +59,8 @@ export const useEEGStore = create<EEGState>((set, get) => ({
   eegData: null,
   selectedChannel: 'Fp1',
   bandPower: null,
+  sampleStatus: 'idle',
+  sampleError: null,
   isStreaming: false,
   brainState: null,
   correlationData: null,
@@ -68,8 +76,60 @@ export const useEEGStore = create<EEGState>((set, get) => ({
     currentFrame: null,
   },
   setEEGData: (d) => set({ eegData: d }),
-  setChannel: (c) => set({ selectedChannel: c }),
+  setChannel: (c) => set({
+    selectedChannel: c,
+    eegData: null,
+    bandPower: null,
+    brainState: null,
+    correlationData: null,
+    sampleStatus: 'idle',
+    sampleError: null,
+  }),
   setBandPower: (b) => set({ bandPower: b }),
+  setLiveSampleLoading: () => {
+    const { playbackMode } = get();
+    if (playbackMode) return;
+    set({
+      sampleStatus: 'loading',
+      sampleError: null,
+    });
+  },
+  setLiveSample: (channel, eeg, bands, brainState, correlation) => {
+    const state = get();
+    if (state.playbackMode || state.selectedChannel !== channel) return false;
+    set({
+      eegData: eeg,
+      bandPower: bands,
+      brainState,
+      correlationData: correlation,
+      sampleStatus: 'success',
+      sampleError: null,
+    });
+    if (get().isRecording) {
+      get().addRecordingFrame(eeg, bands, brainState, correlation);
+    }
+    return true;
+  },
+  setLiveSampleError: (error) => {
+    const { playbackMode } = get();
+    if (playbackMode) return;
+    set({
+      eegData: null,
+      bandPower: null,
+      brainState: null,
+      correlationData: null,
+      sampleStatus: 'error',
+      sampleError: error,
+    });
+  },
+  clearLiveSample: () => set({
+    eegData: null,
+    bandPower: null,
+    brainState: null,
+    correlationData: null,
+    sampleStatus: 'idle',
+    sampleError: null,
+  }),
   setStreaming: (v) => set({ isStreaming: v }),
   setBrainState: (s) => set({ brainState: s }),
   setCorrelationData: (c) => set({ correlationData: c }),
@@ -129,6 +189,7 @@ export const useEEGStore = create<EEGState>((set, get) => ({
   enterPlaybackMode: (recording) => {
     if (recording.frames.length === 0) return;
     set({
+      selectedChannel: recording.channel,
       playbackMode: true,
       activeRecording: recording,
       playbackState: {
@@ -140,10 +201,13 @@ export const useEEGStore = create<EEGState>((set, get) => ({
       bandPower: recording.frames[0].bands,
       brainState: recording.frames[0].brainState,
       correlationData: recording.frames[0].correlation,
+      sampleStatus: 'idle',
+      sampleError: null,
     });
   },
   exitPlaybackMode: () => {
     set({
+      selectedChannel: get().activeRecording?.channel ?? get().selectedChannel,
       playbackMode: false,
       activeRecording: null,
       playbackState: {
@@ -151,6 +215,8 @@ export const useEEGStore = create<EEGState>((set, get) => ({
         currentTime: 0,
         currentFrame: null,
       },
+      sampleStatus: 'idle',
+      sampleError: null,
     });
   },
   setPlaybackTime: (time) => {
@@ -167,6 +233,7 @@ export const useEEGStore = create<EEGState>((set, get) => ({
     }
     const frame = frames[frameIndex];
     set({
+      selectedChannel: activeRecording.channel,
       playbackState: {
         ...get().playbackState,
         currentTime: time,
@@ -176,6 +243,8 @@ export const useEEGStore = create<EEGState>((set, get) => ({
       bandPower: frame.bands,
       brainState: frame.brainState,
       correlationData: frame.correlation,
+      sampleStatus: 'idle',
+      sampleError: null,
     });
   },
   togglePlayback: () => {

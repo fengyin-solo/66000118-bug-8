@@ -9,11 +9,17 @@ const CHANNEL_NAMES: Record<string, string> = {
 };
 
 export const ChannelSelector: React.FC = () => {
-  const { selectedChannel, setChannel } = useEEGStore();
+  const { selectedChannel, setChannel, playbackMode, isRecording } = useEEGStore();
+  const channelLocked = playbackMode || isRecording;
 
   return (
     <div style={{ padding: '16px' }}>
       <h3 style={{ margin: '0 0 12px', fontSize: '14px', color: '#90caf9' }}>通道选择</h3>
+      {channelLocked && (
+        <div style={{ marginBottom: '12px', padding: '8px 10px', background: playbackMode ? 'rgba(106, 27, 154, 0.2)' : 'rgba(211, 47, 47, 0.18)', border: `1px solid ${playbackMode ? '#7b1fa2' : '#ef5350'}`, borderRadius: '6px', fontSize: '11px', color: playbackMode ? '#ce93d8' : '#ef9a9a' }}>
+          {playbackMode ? '回放期间锁定为当前录制通道' : '录制期间保持同一通道'}
+        </div>
+      )}
       <div style={{ marginBottom: '16px', padding: '12px', background: 'rgba(21, 101, 192, 0.2)', borderRadius: '8px', border: '2px solid #1565c0' }}>
         <div style={{ fontSize: '11px', color: '#90caf9', marginBottom: '4px' }}>当前关注</div>
         <div style={{ fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '1px' }}>{selectedChannel}</div>
@@ -23,15 +29,19 @@ export const ChannelSelector: React.FC = () => {
         {CHANNELS.map(ch => (
           <button
             key={ch}
-            onClick={() => setChannel(ch)}
-            title={CHANNEL_NAMES[ch]}
+            onClick={() => {
+              if (!channelLocked) setChannel(ch);
+            }}
+            disabled={channelLocked}
+            title={channelLocked ? '当前模式下不能切换通道' : CHANNEL_NAMES[ch]}
             style={{
               padding: selectedChannel === ch ? '8px 14px' : '6px 12px',
               borderRadius: '16px',
               border: selectedChannel === ch ? '2px solid #64b5f6' : '1px solid #37474f',
               background: selectedChannel === ch ? '#1565c0' : '#1e293b',
               color: selectedChannel === ch ? '#fff' : '#94a3b8',
-              cursor: 'pointer',
+              cursor: channelLocked ? 'not-allowed' : 'pointer',
+              opacity: channelLocked && selectedChannel !== ch ? 0.45 : 1,
               fontSize: selectedChannel === ch ? '13px' : '12px',
               fontWeight: selectedChannel === ch ? 700 : 400,
               transition: 'all 0.2s ease',

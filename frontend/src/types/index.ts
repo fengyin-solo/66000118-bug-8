@@ -1,5 +1,7 @@
 export interface EEGData { channels: string[]; sample_rate: number; data: Record<string, number[]>; time: number[]; duration: number; }
-export interface BandPower { delta: number; theta: number; alpha: number; beta: number; gamma: number; }
+export type BandName = 'delta' | 'theta' | 'alpha' | 'beta' | 'gamma';
+export type BandPower = Record<BandName, number | null>;
+export type SampleStatus = 'idle' | 'loading' | 'success' | 'error';
 export interface BrainState {
   focus: number;
   relaxation: number;
@@ -12,8 +14,8 @@ export interface BrainState {
 export interface ChannelCorrelation {
   channel: string;
   targetChannel: string;
-  correlation: number;
-  coherence: number;
+  correlation: number | null;
+  coherence: number | null;
 }
 export interface CorrelationData {
   targetChannel: string;

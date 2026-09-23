@@ -33,8 +33,9 @@ const ScoreBar: React.FC<{ label: string; value: number; color: string; icon: st
 };
 
 export const BrainStateDashboard: React.FC = () => {
-  const { brainState, selectedChannel, playbackMode, activeRecording, playbackState } = useEEGStore();
+  const { brainState, selectedChannel, playbackMode, activeRecording, playbackState, sampleStatus, sampleError } = useEEGStore();
   const channelName = CHANNEL_NAMES[selectedChannel] || selectedChannel;
+  const failed = sampleStatus === 'error' && !playbackMode;
 
   if (!brainState) {
     return (
@@ -48,8 +49,15 @@ export const BrainStateDashboard: React.FC = () => {
           <span>🧠</span>
           {playbackMode ? '回放脑状态' : '实时脑状态'}
           {playbackMode && <span style={{ fontSize: '12px', color: '#1565c0', fontWeight: 500 }}>⏮ 回放中</span>}
+          {sampleStatus === 'loading' && !playbackMode && <span style={{ fontSize: '12px', color: '#999' }}>计算中...</span>}
         </h3>
-        <div style={{ color: '#999', padding: '40px 0', textAlign: 'center' }}>等待数据中...</div>
+        {failed ? (
+          <div style={{ padding: '12px', color: '#b71c1c', background: '#ffebee', borderRadius: '8px', fontSize: '13px' }}>
+            {sampleError || '当前通道脑状态计算失败'}
+          </div>
+        ) : (
+          <div style={{ color: '#999', padding: '40px 0', textAlign: 'center' }}>等待数据中...</div>
+        )}
       </div>
     );
   }
